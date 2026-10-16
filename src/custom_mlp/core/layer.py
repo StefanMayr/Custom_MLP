@@ -25,8 +25,11 @@ class InputLayer(Layer):
         self.output = None
 
     def set_input(self, input_data):
-        if input_data.shape[0] != self.output_size:
-            raise ValueError(f"Input data must have shape ({self.output_size}, n_samples), but got {input_data.shape}.")
+        input_data = np.asarray(input_data, dtype=float)
+        if input_data.shape == (self.output_size,):
+            input_data = input_data.reshape(-1, 1)
+        if input_data.shape != (self.output_size, 1):
+            raise ValueError(f"Expected input shape ({self.output_size}, 1), got {x.shape}")
         self.input_data = input_data
 
     def forward(self):
