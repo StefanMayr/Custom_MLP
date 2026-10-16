@@ -1,1 +1,1 @@
-from .layer import InputLayer, HiddenLayer, OutputLayer
+from .layer import Layer, InputLayer, DenseLayer, ActivationLayer
