@@ -12,14 +12,14 @@ class Custom_MLP:
             if i < len(layers) - 1:
                 layer.next_layer = layers[i + 1]
             if isinstance(layer, DenseLayer):
-                input_neurons = layer.previous_layer.output_size
+                input_neurons = len(layer.previous_layer)
                 layer.initialize(input_neurons)
         self.lastlayer = layers[-1]
 
 
     def predict(self, input_data):
         self.firstlayer.set_input(input_data)
-        current = self.firstlayer.next_layer
+        current = self.firstlayer
         while current is not None:
             current.forward()
             current = current.next_layer

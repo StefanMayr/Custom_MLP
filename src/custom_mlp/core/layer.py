@@ -1,5 +1,5 @@
 import numpy as np
-from .activation_function import Linear, Sigmoid, ReLu, Tanh
+from .activation_function import Linear, Sigmoid, ReLu, Tanh, Softmax
 
 #------------------------------------------------
 # Layer Classes
@@ -29,11 +29,14 @@ class InputLayer(Layer):
         if input_data.shape == (self.output_size,):
             input_data = input_data.reshape(-1, 1)
         if input_data.shape != (self.output_size, 1):
-            raise ValueError(f"Expected input shape ({self.output_size}, 1), got {x.shape}")
+            raise ValueError(f"Expected input shape ({self.output_size}, 1), got {input_data.shape}")
         self.input_data = input_data
 
     def forward(self):
         self.output = self.input_data
+
+    def __len__(self):
+        return self.output_size
 
 
 #------------------------------------------------
@@ -54,7 +57,10 @@ class DenseLayer(Layer):
         self.biases = np.zeros((self.neuron_size, 1))
 
     def forward(self):
-        self.z = self.weights @ self.previous_layer.output + self.biases
+        self.output = self.weights @ self.previous_layer.output + self.biases
+
+    def __len__(self):
+        return self.neuron_size
 
 
 #------------------------------------------------
@@ -78,5 +84,7 @@ class ActivationLayer(Layer):
         z = self.previous_layer.output
         exp_z = np.exp(z - np.max(z))
         self.output = exp_z / np.sum(exp_z, axis=0, keepdims=True)
-        
 
+    def __len__(self):
+        return len(self.previous_layer)
+     

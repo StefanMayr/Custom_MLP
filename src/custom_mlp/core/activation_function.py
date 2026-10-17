@@ -44,3 +44,16 @@ class Tanh:
 
     def derivative(self, x):
         return 1 - np.tanh(x) ** 2
+
+
+class Softmax:
+    def __init__(self):
+        pass
+
+    def activate(self, x):
+        exp_x = np.exp(x - np.max(x))
+        return exp_x / np.sum(exp_x, axis=0, keepdims=True)
+
+    def derivative(self, x):
+        s = self.activate(x)
+        return s * (1 - s)
