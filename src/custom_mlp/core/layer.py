@@ -59,6 +59,18 @@ class DenseLayer(Layer):
     def forward(self):
         self.output = self.weights @ self.previous_layer.output + self.biases
 
+    def get_weights(self):
+        return self.weights
+
+    def set_weights(self, weights):
+        self.weights = weights
+
+    def get_bias(self):
+        return self.biases
+
+    def set_biases(self, biases):
+        self.biases = biases
+
     def __len__(self):
         return self.neuron_size
 
