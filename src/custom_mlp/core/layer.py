@@ -52,12 +52,17 @@ class DenseLayer(Layer):
         self.output = None
         self.delta = None
 
-    def initialize(self, input_size):
-        self.weights = np.random.randn(self.neuron_size, input_size) * np.sqrt(1 / input_size)
-        self.biases = np.zeros((self.neuron_size, 1))
+    def initialize(self, weights, biases):
+        self.weights = weights
+        self.biases = biases
+        #self.weights = np.random.randn(self.neuron_size, input_size) * np.sqrt(1 / input_size)
+        #self.biases = np.zeros((self.neuron_size, 1))
 
     def forward(self):
         self.output = self.weights @ self.previous_layer.output + self.biases
+
+    def backward(self):
+        self.delta = self.weights.T @ self.next_layer.delta
 
     def get_weights(self):
         return self.weights
@@ -88,14 +93,20 @@ class ActivationLayer(Layer):
 
         self.activation_function = activation_function
         self.output = None
+        self.delta = None
+
 
     def forward_normal(self):
         self.output = self.activation_function.activate(self.previous_layer.output)
+
 
     def forward_softmax(self):
         z = self.previous_layer.output
         exp_z = np.exp(z - np.max(z))
         self.output = exp_z / np.sum(exp_z, axis=0, keepdims=True)
+
+    def get_backwards(self):
+        self.delta = self.activation_function.derivative(self.output)*self.next_layer.delta
 
     def __len__(self):
         return len(self.previous_layer)
