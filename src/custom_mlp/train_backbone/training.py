@@ -11,3 +11,8 @@ class LossFunction:
     def calculate_quadratic_loss_fuction(self, output: np.ndarray | None = None, output_desired: np.ndarray | None = None):
         self-self.loss = 0.5 * (output - output_desired)**2
         self.loss_derivative = (output - output_desired)
+
+
+class Optimizer:
+    def __init__(self):
+        self.delta_weights = None

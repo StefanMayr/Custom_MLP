@@ -58,7 +58,6 @@ class Custom_MLP:
         if isinstance(layers_data, str):
             layers_data = json.loads(layers_data)
 
-        layers = []
         activations = {
             "Linear": Linear,
             "Sigmoid": Sigmoid,
@@ -67,29 +66,28 @@ class Custom_MLP:
             "Softmax": Softmax
         }
 
-        # 1. Layer rekonstruieren
+        layers = []
+        # 1. Gespeicherte Architektur rekonstruieren
         for layer_data in layers_data:
             if layer_data["layertype"] == "Dense":
                 layers.append(DenseLayer(layer_data["neurons"]))
             elif layer_data["layertype"] == "Activation":
                 activation_type = layer_data["type"]
-                if activation_type not in activations:
-                    raise ValueError(f"Unknown activation: {activation_type}")
                 layers.append(ActivationLayer(activations[activation_type]()))
-            else:
-                raise ValueError(f"Unknown layer type: {layer_data['layertype']}")
-        # 2. Konstruktor für zentrale Initialisierung nutzen
+        # 2. Bisheriges Netzwerk vollständig neu initialisieren
         self.__init__(input_size, layers)
-        # 3. Gespeicherte Parameter in vorhandene Arrays kopieren
+
+        # 3. Initialisierte Gewichte und Biases überschreiben
         for i in range(len(self.weights)):
-            weights = model[f"weights_{i}"]
-            biases = model[f"biases_{i}"]
+            weights = np.asarray(model[f"weights_{i}"])
+            biases = np.asarray(model[f"biases_{i}"])
+
             if self.weights[i].shape != weights.shape:
-                raise ValueError(f"Weight shape mismatch at Dense {i}")
+                raise ValueError(f"Dense {i}: Expected {self.weights[i].shape}, got {weights.shape}")
             if self.biases[i].shape != biases.shape:
-                raise ValueError(f"Bias shape mismatch at Dense {i}")
-            self.weights[i][:] = weights
-            self.biases[i][:] = biases
+                raise ValueError(f"Dense {i}: Expected {self.biases[i].shape}, got {biases.shape}")
+            self.weights[i] = weights.copy()
+            self.biases[i] = biases.copy()
 
 
     def load_model(self, model_path):
@@ -119,16 +117,15 @@ class Custom_MLP:
 
     def backward_pass(self):
         current = self.lastlayer
-        pass
+        while current is not None:
+            current.backward()
+            current = current.previous_layer
 
-    def train(self, data_path, learning_rate=0.1, batch_size=8):
-        """
-        train_test_path = Path(data_path)
-        if self.check_folders(train_test_path) is False:
-            print("Ordnersturktur nicht korrekt")
-            return
-        """
-        
+    def train(self, x_data, y_data, epochs=1, learning_rate=0.1, batch_size=8):
+        if x_data.shape[0] != y_data.shape[0]:
+            print(f"x_data length does not match y_data length")
+            return None
+        y_data = y_data.reshape(-1, 1)
         # Routine 
         """
         1. Extract one Example from training data
@@ -137,4 +134,20 @@ class Custom_MLP:
         4. Backpropagation algo
         5. Gradient Descent
         """
+        dW_list = []
+        db_list = []
+        num_of_training = x_data.shape[0]
 
+        for iteration in range(num_of_training):
+            self.forward_pass(x_data[iteration, :])
+            loss = y_data[iteration, :] - self.lastlayer.output
+            self.lastlayer.backward_last(loss)
+            current = self.lastlayer.previous_layer
+            while current is not None:
+                dW, db = current.backward()
+                if dW is not None:
+                    dW_list.insert(0, dW)
+                if db is not None:
+                    db_list.insert(0, db)
+                current = current.previous_layer
+        return dW_list, db_list

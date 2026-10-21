@@ -9,9 +9,10 @@ mlp = Custom_MLP(5, [
     DenseLayer(16),
     ActivationLayer(ReLu()),
     DenseLayer(2),
-    ActivationLayer(Softmax())])
+    ActivationLayer(Softmax())
+])
 
-#mlp.save_model()
+# mlp.save_model()
 mlp.load_model("D:/PrivatProjekte/Neuronale_Netze/Custom_MLP/results/weights.npz")
 
 output = mlp.predict(np.array([1, 2, 3, 4, 5]))

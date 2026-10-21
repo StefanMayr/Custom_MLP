@@ -35,6 +35,9 @@ class InputLayer(Layer):
     def forward(self):
         self.output = self.input_data
 
+    def backward(self):
+        return None, None
+
     def __len__(self):
         return self.output_size
 
@@ -62,7 +65,10 @@ class DenseLayer(Layer):
         self.output = self.weights @ self.previous_layer.output + self.biases
 
     def backward(self):
+        dW = self.next_layer.delta @ self.previous_layer.output.T
+        db = self.next_layer.delta
         self.delta = self.weights.T @ self.next_layer.delta
+        return dW, db
 
     def get_weights(self):
         return self.weights
@@ -99,14 +105,20 @@ class ActivationLayer(Layer):
     def forward_normal(self):
         self.output = self.activation_function.activate(self.previous_layer.output)
 
-
     def forward_softmax(self):
         z = self.previous_layer.output
         exp_z = np.exp(z - np.max(z))
         self.output = exp_z / np.sum(exp_z, axis=0, keepdims=True)
 
-    def get_backwards(self):
+    def backward(self):
         self.delta = self.activation_function.derivative(self.output)*self.next_layer.delta
+        return None, None
+#
+    def backward_last(self, loss):
+            print(f"Shape = {loss.shape}")
+            print(f"deriative = {self.activation_function.derivative(self.output).shape}")
+            self.delta = self.activation_function.derivative(self.output)*loss
+            return None, None
 
     def __len__(self):
         return len(self.previous_layer)
