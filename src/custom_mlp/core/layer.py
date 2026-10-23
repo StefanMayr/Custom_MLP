@@ -63,6 +63,8 @@ class DenseLayer(Layer):
 
     def forward(self):
         self.output = self.weights @ self.previous_layer.output + self.biases
+        #print(f"Local_weights = {self.weights}")
+        #print(f"denselayer_output = {self.output}")
 
     def backward(self):
         dW = self.next_layer.delta @ self.previous_layer.output.T
@@ -104,6 +106,7 @@ class ActivationLayer(Layer):
 
     def forward_normal(self):
         self.output = self.activation_function.activate(self.previous_layer.output)
+        #print(f"actilayer_output = {self.output}")
 
     def forward_softmax(self):
         z = self.previous_layer.output
@@ -111,14 +114,12 @@ class ActivationLayer(Layer):
         self.output = exp_z / np.sum(exp_z, axis=0, keepdims=True)
 
     def backward(self):
-        self.delta = self.activation_function.derivative(self.output)*self.next_layer.delta
+        self.delta = self.activation_function.backward(self.previous_layer.output, self.next_layer.delta)
         return None, None
-#
-    def backward_last(self, loss):
-            print(f"Shape = {loss.shape}")
-            print(f"deriative = {self.activation_function.derivative(self.output).shape}")
-            self.delta = self.activation_function.derivative(self.output)*loss
-            return None, None
+
+    def backward_last(self, loss_gradient):
+        self.delta = self.activation_function.backward(self.previous_layer.output, loss_gradient)
+        return None, None
 
     def __len__(self):
         return len(self.previous_layer)

@@ -1,9 +1,28 @@
 import numpy as np
+from abc import ABC, abstractmethod
 
 
-class Linear:
-    def __init__(self):
+# ------------------------------------------------
+# Base Activation Function
+# ------------------------------------------------
+class ActivationFunction(ABC):
+
+    @abstractmethod
+    def activate(self, x):
         pass
+
+    @abstractmethod
+    def derivative(self, x):
+        pass
+
+    def backward(self, x, grad_output):
+        return self.derivative(x) * grad_output
+
+
+# ------------------------------------------------
+# Linear
+# ------------------------------------------------
+class Linear(ActivationFunction):
 
     def activate(self, x):
         return x
@@ -15,9 +34,10 @@ class Linear:
         return "Linear"
 
 
-class Sigmoid:
-    def __init__(self):
-        pass
+# ------------------------------------------------
+# Sigmoid
+# ------------------------------------------------
+class Sigmoid(ActivationFunction):
 
     def activate(self, x):
         return 1 / (1 + np.exp(-x))
@@ -29,9 +49,11 @@ class Sigmoid:
     def __str__(self):
         return "Sigmoid"
 
-class ReLu:
-    def __init__(self):
-        pass
+
+# ------------------------------------------------
+# ReLU
+# ------------------------------------------------
+class ReLu(ActivationFunction):
 
     def activate(self, x):
         return np.maximum(0, x)
@@ -42,9 +64,11 @@ class ReLu:
     def __str__(self):
         return "ReLu"
 
-class Tanh:
-    def __init__(self):
-        pass
+
+# ------------------------------------------------
+# Tanh
+# ------------------------------------------------
+class Tanh(ActivationFunction):
 
     def activate(self, x):
         return np.tanh(x)
@@ -55,17 +79,40 @@ class Tanh:
     def __str__(self):
         return "Tanh"
 
-class Softmax:
-    def __init__(self):
-        pass
+
+# ------------------------------------------------
+# Softmax
+# ------------------------------------------------
+class Softmax(ActivationFunction):
 
     def activate(self, x):
-        exp_x = np.exp(x - np.max(x))
-        return exp_x / np.sum(exp_x, axis=0, keepdims=True)
+        exp_x = np.exp(
+            x - np.max(x, axis=0, keepdims=True)
+        )
+
+        return exp_x / np.sum(
+            exp_x, axis=0, keepdims=True
+        )
 
     def derivative(self, x):
+        # Vollständige Jacobi-Matrix
+        # Für einen einzelnen Spaltenvektor (n, 1)
+        s = self.activate(x).reshape(-1)
+        return np.diag(s) - np.outer(s, s)
+
+    def backward(self, x, grad_output):
+        # Effiziente Berechnung von J.T @ grad_output
+        # Ohne die Jacobi-Matrix explizit zu erzeugen
         s = self.activate(x)
-        return s * (1 - s)
+
+        return s * (
+            grad_output
+            - np.sum(
+                s * grad_output,
+                axis=0,
+                keepdims=True
+            )
+        )
 
     def __str__(self):
         return "Softmax"

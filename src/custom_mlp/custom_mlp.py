@@ -25,30 +25,30 @@ class Custom_MLP:
                 layer.initialize(weights=self.weights[weight_index], biases=self.biases[weight_index])
         self.lastlayer = layers[-1]
 
+    def print_weights(self):
+        print(self.weights)
 
-        def get_architecture(self):
-            model = {"formatversion": 1, "inputs": self.firstlayer.output_size}
-            current = self.firstlayer
-            layerlist = []
-            dense_index = 0
+    def get_architecture(self):
+        model = {"formatversion": 1, "inputs": self.firstlayer.output_size}
+        current = self.firstlayer
+        layerlist = []
+        dense_index = 0
 
-            while current is not None:
-                if isinstance(current, DenseLayer):
-                    layerlist.append({"layertype": "Dense", "neurons": current.neuron_size})
-                    model[f"weights_{dense_index}"] = self.weights[dense_index]
-                    model[f"biases_{dense_index}"] = self.biases[dense_index]
-                    dense_index += 1
-                elif isinstance(current, ActivationLayer):
-                    layerlist.append({"layertype": "Activation", "type": str(current.activation_function)})
-                current = current.next_layer
-            model["layers"] = json.dumps(layerlist)
-            return model
-
+        while current is not None:
+            if isinstance(current, DenseLayer):
+                layerlist.append({"layertype": "Dense", "neurons": current.neuron_size})
+                model[f"weights_{dense_index}"] = self.weights[dense_index]
+                model[f"biases_{dense_index}"] = self.biases[dense_index]
+                dense_index += 1
+            elif isinstance(current, ActivationLayer):
+                layerlist.append({"layertype": "Activation", "type": str(current.activation_function)})
+            current = current.next_layer
+        model["layers"] = json.dumps(layerlist)
+        return model
 
     def save_model(self):
         model = self.get_architecture()
         np.savez_compressed("D:/PrivatProjekte/Neuronale_Netze/Custom_MLP/results/weights.npz", **model)
-
 
     def initialize_model_from_weights(self, model):
         input_size = int(model["inputs"])
@@ -57,37 +57,41 @@ class Custom_MLP:
             layers_data = layers_data.item()
         if isinstance(layers_data, str):
             layers_data = json.loads(layers_data)
-
-        activations = {
-            "Linear": Linear,
-            "Sigmoid": Sigmoid,
-            "ReLu": ReLu,
-            "Tanh": Tanh,
-            "Softmax": Softmax
-        }
-
+        activations = {"Linear": Linear, "Sigmoid": Sigmoid, "ReLu": ReLu, "Tanh": Tanh, "Softmax": Softmax}
         layers = []
-        # 1. Gespeicherte Architektur rekonstruieren
+        # 1. Architektur rekonstruieren
         for layer_data in layers_data:
+
             if layer_data["layertype"] == "Dense":
-                layers.append(DenseLayer(layer_data["neurons"]))
+                layers.append(DenseLayer(int(layer_data["neurons"])))
             elif layer_data["layertype"] == "Activation":
                 activation_type = layer_data["type"]
                 layers.append(ActivationLayer(activations[activation_type]()))
-        # 2. Bisheriges Netzwerk vollständig neu initialisieren
+        # 2. Neues Netzwerk erstellen
         self.__init__(input_size, layers)
 
-        # 3. Initialisierte Gewichte und Biases überschreiben
-        for i in range(len(self.weights)):
-            weights = np.asarray(model[f"weights_{i}"])
-            biases = np.asarray(model[f"biases_{i}"])
+        # 3. Gewichte laden und Referenzen neu setzen
+        current = self.firstlayer
+        dense_index = 0
 
-            if self.weights[i].shape != weights.shape:
-                raise ValueError(f"Dense {i}: Expected {self.weights[i].shape}, got {weights.shape}")
-            if self.biases[i].shape != biases.shape:
-                raise ValueError(f"Dense {i}: Expected {self.biases[i].shape}, got {biases.shape}")
-            self.weights[i] = weights.copy()
-            self.biases[i] = biases.copy()
+        while current is not None:
+            if isinstance(current, DenseLayer):
+                weights = np.asarray(model[f"weights_{dense_index}"])
+                biases = np.asarray(model[f"biases_{dense_index}"])
+                # Dimensionen überprüfen
+                if self.weights[dense_index].shape != weights.shape:
+                    raise ValueError(f"Dense {dense_index}: Expected {self.weights[dense_index].shape}, got {weights.shape}")
+                if self.biases[dense_index].shape != biases.shape:
+                    raise ValueError(f"Dense {dense_index}: Expected {self.biases[dense_index].shape}, got {biases.shape}")
+                # Zentrale Arrays ersetzen
+                self.weights[dense_index] = weights.copy()
+                self.biases[dense_index] = biases.copy()
+
+                # Referenzen des DenseLayers neu setzen
+                current.weights = self.weights[dense_index]
+                current.biases = self.biases[dense_index]
+                dense_index += 1
+            current = current.next_layer
 
 
     def load_model(self, model_path):
@@ -114,6 +118,32 @@ class Custom_MLP:
     def check_folders(self, path):
         return all((path / folder).is_dir() and any((path / folder).iterdir()) for folder in ["train", "test"])
 
+    def validate_y_data(self, y_data, num_samples):
+        y_data = np.asarray(y_data)
+
+        # Anzahl der Output-Neuronen bestimmen
+        current = self.lastlayer
+        while current is not None and not isinstance(current, DenseLayer):
+            current = current.previous_layer
+        if current is None:
+            raise ValueError("No DenseLayer found")
+        output_neurons = current.neuron_size
+
+        # Einzelne Zielwerte / 1D-Vektoren behandeln
+        if y_data.ndim == 0:
+            y_data = y_data.reshape(1, 1)
+        elif y_data.ndim == 1:
+            if num_samples == 1:
+                y_data = y_data.reshape(-1, 1)
+            elif output_neurons == 1 and y_data.size == num_samples:
+                y_data = y_data.reshape(1, -1)
+            else:
+                raise ValueError("Ambiguous 1D target data")
+        # Korrekte Shape überprüfen
+        expected_shape = (output_neurons, num_samples)
+        if y_data.shape != expected_shape:
+            raise ValueError(f"Invalid y_data shape: {y_data.shape}, expected {expected_shape}")
+        return y_data
 
     def backward_pass(self):
         current = self.lastlayer
@@ -122,10 +152,17 @@ class Custom_MLP:
             current = current.previous_layer
 
     def train(self, x_data, y_data, epochs=1, learning_rate=0.1, batch_size=8):
-        if x_data.shape[0] != y_data.shape[0]:
+        if x_data.shape[1] != y_data.shape[1]:
             print(f"x_data length does not match y_data length")
             return None
-        y_data = y_data.reshape(-1, 1)
+        #y_data = y_data.reshape(-1, 1)
+        x_data = np.asarray(x_data)
+        if x_data.ndim == 1:
+            x_data = x_data.reshape(-1, 1)
+        if x_data.ndim != 2 or x_data.shape[0] != self.firstlayer.output_size:
+            raise ValueError("Invalid x_data shape")
+        num_of_training = x_data.shape[1]
+        y_data = self.validate_y_data(y_data, num_of_training)
         # Routine 
         """
         1. Extract one Example from training data
@@ -140,7 +177,9 @@ class Custom_MLP:
 
         for iteration in range(num_of_training):
             self.forward_pass(x_data[iteration, :])
-            loss = y_data[iteration, :] - self.lastlayer.output
+            print(f"forward ausgang = {self.lastlayer.output}")
+            loss = self.lastlayer.output - y_data[iteration, :]
+            print(f"Loss = {loss}")
             self.lastlayer.backward_last(loss)
             current = self.lastlayer.previous_layer
             while current is not None:

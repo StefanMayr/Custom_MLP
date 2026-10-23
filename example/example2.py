@@ -42,6 +42,7 @@ mlp = Custom_MLP(5, [
     ActivationLayer(Softmax()),
 ])
 mlp.load_model(str(path / "weights.npz"))
+#mlp.print_weights()
 
 with np.load(path / "trainingsdaten.npz") as data:
     x_data = data["x_data"]
@@ -61,8 +62,7 @@ if not isinstance(result, (tuple, list)) or len(result) != 2:
     raise TypeError(
         "train() muss (dW, db) zurückgeben. "
         f"Tatsächlicher Rückgabetyp: {type(result).__name__}, "
-        f"Wert: {repr(result)[:300]}"
-    )
+        f"Wert: {repr(result)[:300]}")
 
 dW, db = result
 print(dW)
