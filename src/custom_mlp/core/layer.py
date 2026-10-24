@@ -35,6 +35,9 @@ class InputLayer(Layer):
     def forward(self):
         self.output = self.input_data
 
+    def backward(self):
+        return None, None
+
     def __len__(self):
         return self.output_size
 
@@ -52,12 +55,23 @@ class DenseLayer(Layer):
         self.output = None
         self.delta = None
 
-    def initialize(self, input_size):
-        self.weights = np.random.randn(self.neuron_size, input_size) * np.sqrt(1 / input_size)
-        self.biases = np.zeros((self.neuron_size, 1))
+    def initialize(self, weights, biases):
+        self.weights = weights
+        self.biases = biases
+        #self.weights = np.random.randn(self.neuron_size, input_size) * np.sqrt(1 / input_size)
+        #self.biases = np.zeros((self.neuron_size, 1))
 
     def forward(self):
         self.output = self.weights @ self.previous_layer.output + self.biases
+        #print(f"Local_weights = {self.weights}")
+        #print(f"denselayer_output = {self.output}")
+
+    def backward(self):
+        dW = self.next_layer.delta @ self.previous_layer.output.T
+        db = self.next_layer.delta
+        self.delta = self.weights.T @ self.next_layer.delta
+        print(f"delta_dense = {self.delta}")
+        return dW, db
 
     def get_weights(self):
         return self.weights
@@ -88,14 +102,26 @@ class ActivationLayer(Layer):
 
         self.activation_function = activation_function
         self.output = None
+        self.delta = None
+
 
     def forward_normal(self):
         self.output = self.activation_function.activate(self.previous_layer.output)
+        #print(f"actilayer_output = {self.output}")
 
     def forward_softmax(self):
         z = self.previous_layer.output
         exp_z = np.exp(z - np.max(z))
         self.output = exp_z / np.sum(exp_z, axis=0, keepdims=True)
+
+    def backward(self):
+        self.delta = self.activation_function.backward(self.previous_layer.output, self.next_layer.delta)
+        print(f"delta_activ = {self.delta}")
+        return None, None
+
+    def backward_last(self, loss_gradient):
+        self.delta = self.activation_function.backward(self.previous_layer.output, loss_gradient)
+        return None, None
 
     def __len__(self):
         return len(self.previous_layer)
