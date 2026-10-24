@@ -70,6 +70,7 @@ class DenseLayer(Layer):
         dW = self.next_layer.delta @ self.previous_layer.output.T
         db = self.next_layer.delta
         self.delta = self.weights.T @ self.next_layer.delta
+        print(f"delta_dense = {self.delta}")
         return dW, db
 
     def get_weights(self):
@@ -115,6 +116,7 @@ class ActivationLayer(Layer):
 
     def backward(self):
         self.delta = self.activation_function.backward(self.previous_layer.output, self.next_layer.delta)
+        print(f"delta_activ = {self.delta}")
         return None, None
 
     def backward_last(self, loss_gradient):

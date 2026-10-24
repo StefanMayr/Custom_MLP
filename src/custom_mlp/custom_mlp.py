@@ -152,17 +152,17 @@ class Custom_MLP:
             current = current.previous_layer
 
     def train(self, x_data, y_data, epochs=1, learning_rate=0.1, batch_size=8):
-        if x_data.shape[1] != y_data.shape[1]:
+        if x_data.shape[0] != y_data.shape[0]:
             print(f"x_data length does not match y_data length")
             return None
         #y_data = y_data.reshape(-1, 1)
         x_data = np.asarray(x_data)
         if x_data.ndim == 1:
             x_data = x_data.reshape(-1, 1)
-        if x_data.ndim != 2 or x_data.shape[0] != self.firstlayer.output_size:
+        if x_data.ndim != 3 or x_data.shape[1] != self.firstlayer.output_size:
             raise ValueError("Invalid x_data shape")
         num_of_training = x_data.shape[1]
-        y_data = self.validate_y_data(y_data, num_of_training)
+        #y_data = self.validate_y_data(y_data, num_of_training)
         # Routine 
         """
         1. Extract one Example from training data
@@ -173,14 +173,15 @@ class Custom_MLP:
         """
         dW_list = []
         db_list = []
-        num_of_training = x_data.shape[0]
+        num_of_training = 1# x_data.shape[0]
 
         for iteration in range(num_of_training):
-            self.forward_pass(x_data[iteration, :])
-            print(f"forward ausgang = {self.lastlayer.output}")
-            loss = self.lastlayer.output - y_data[iteration, :]
-            print(f"Loss = {loss}")
+            self.forward_pass(x_data[iteration].reshape(-1, 1))
+            #print(f"forward ausgang = {self.lastlayer.output}")
+            loss = self.lastlayer.output - y_data[iteration].reshape(-1,1)
+            #print(f"Loss = {loss}")
             self.lastlayer.backward_last(loss)
+            #print(f"outputlast = {self.lastlayer.delta}")
             current = self.lastlayer.previous_layer
             while current is not None:
                 dW, db = current.backward()

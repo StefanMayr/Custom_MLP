@@ -65,7 +65,7 @@ if not isinstance(result, (tuple, list)) or len(result) != 2:
         f"Wert: {repr(result)[:300]}")
 
 dW, db = result
-print(dW)
+#print(dW)
 
 
 def as_gradient_list(value, name):

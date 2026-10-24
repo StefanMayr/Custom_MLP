@@ -86,13 +86,8 @@ class Tanh(ActivationFunction):
 class Softmax(ActivationFunction):
 
     def activate(self, x):
-        exp_x = np.exp(
-            x - np.max(x, axis=0, keepdims=True)
-        )
-
-        return exp_x / np.sum(
-            exp_x, axis=0, keepdims=True
-        )
+        exp_x = np.exp(x - np.max(x, axis=0, keepdims=True))
+        return exp_x / np.sum(exp_x, axis=0, keepdims=True)
 
     def derivative(self, x):
         # Vollständige Jacobi-Matrix
@@ -104,15 +99,7 @@ class Softmax(ActivationFunction):
         # Effiziente Berechnung von J.T @ grad_output
         # Ohne die Jacobi-Matrix explizit zu erzeugen
         s = self.activate(x)
-
-        return s * (
-            grad_output
-            - np.sum(
-                s * grad_output,
-                axis=0,
-                keepdims=True
-            )
-        )
+        return s * (grad_output - np.sum(s * grad_output, axis=0, keepdims=True))
 
     def __str__(self):
         return "Softmax"
