@@ -172,20 +172,24 @@ class Custom_MLP:
 
         # Loop for epochs (How many times on the same dataset)
         for epoch in range(1, epochs+1):
+            epoch_loss = 0
             for iteration in range(num_of_training):
                 # Prototype => one batch (currently all)
                 dW_batch_list = []
                 db_batch_list = []
+                iteration_loss = 0
 
                 for batch in range(batch_size):
                     dW_network_list = []
                     db_network_list = []
+                    iteration_loss = 0
                     # 1. Make forward pass
                     self.forward_pass(x_data[batch+iteration*batch_size].reshape(-1, 1))
 
                     # 2. Calculate Loss function
                     #loss = self.lastlayer.output - y_data[iteration].reshape(-1,1)
                     self.loss_function.compute(self.lastlayer.output, y_data[batch + iteration * batch_size].reshape(-1,1))  
+                    iteration_loss += self.loss_function.loss
 
                     # 3.backward pass
                     self.lastlayer.backward_last(self.loss_function.loss_derivative)
@@ -200,10 +204,14 @@ class Custom_MLP:
                     # 4. save all batches
                     dW_batch_list.append(dW_network_list)
                     db_batch_list.append(db_network_list)
+                iteration_loss = iteration_loss / batch_size
+                epoch_loss += iteration_loss
                 # 5. Averaging over all batches
                 dW_averaged = [np.mean(arrays, axis=0) for arrays in zip(*dW_batch_list)]
                 db_averaged = [np.mean(arrays, axis=0) for arrays in zip(*db_batch_list)]
 
                 # 4. Gradient descent
                 self.optimizer.compute(self.weights, self.biases, dW_averaged, db_averaged)
+            epoch_loss = epoch_loss/num_of_training 
+            print(f"epoch {epoch}: loss = {epoch_loss}")
         return True

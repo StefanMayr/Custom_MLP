@@ -9,8 +9,9 @@ class LossFunction:
             self.compute = self.calculate_mse_lf
 
     def calculate_mse_lf(self, output: np.ndarray | None = None, output_desired: np.ndarray | None = None):
-        self.loss = 0.5 * (output - output_desired)**2
-        self.loss_derivative = (output - output_desired)
+        error = output - output_desired
+        self.loss = 0.5 * np.sum(error ** 2)
+        self.loss_derivative = error
 
 
 class Optimizer:
