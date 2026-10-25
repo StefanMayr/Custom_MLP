@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from .core.layer import Layer, InputLayer, DenseLayer, ActivationLayer
 from .core.activation_function import Linear, ReLu, Tanh, Sigmoid, Softmax
+from .train_backbone.training import LossFunction, Optimizer
 
 
 class Custom_MLP:
@@ -151,7 +152,10 @@ class Custom_MLP:
             current.backward()
             current = current.previous_layer
 
-    def train(self, x_data, y_data, epochs=1, learning_rate=0.1, batch_size=8):
+    def train(self, x_data, y_data, epochs=1, learning_rate=0.1, batch_size=8, loss_function = "mse", optimizer = "gradient"):
+        self.optimizer = Optimizer(optimizer, learning_rate=learning_rate)
+        self.loss_function = LossFunction(loss_function_type=loss_function)
+
         if x_data.shape[0] != y_data.shape[0]:
             print(f"x_data length does not match y_data length")
             return None
@@ -162,32 +166,52 @@ class Custom_MLP:
         if x_data.ndim != 3 or x_data.shape[1] != self.firstlayer.output_size:
             raise ValueError("Invalid x_data shape")
         num_of_training = x_data.shape[1]
-        #y_data = self.validate_y_data(y_data, num_of_training)
-        # Routine 
-        """
-        1. Extract one Example from training data
-        2. Calculate Forward pass
-        3. Calculate Loss
-        4. Backpropagation algo
-        5. Gradient Descent
-        """
-        dW_list = []
-        db_list = []
-        num_of_training = 1# x_data.shape[0]
+        
+        #num_of_training = x_data.shape[0]
+        num_of_training = int(x_data.shape[0]/batch_size) # Öeave the rest 
 
-        for iteration in range(num_of_training):
-            self.forward_pass(x_data[iteration].reshape(-1, 1))
-            #print(f"forward ausgang = {self.lastlayer.output}")
-            loss = self.lastlayer.output - y_data[iteration].reshape(-1,1)
-            #print(f"Loss = {loss}")
-            self.lastlayer.backward_last(loss)
-            #print(f"outputlast = {self.lastlayer.delta}")
-            current = self.lastlayer.previous_layer
-            while current is not None:
-                dW, db = current.backward()
-                if dW is not None:
-                    dW_list.insert(0, dW)
-                if db is not None:
-                    db_list.insert(0, db)
-                current = current.previous_layer
-        return dW_list, db_list
+        # Loop for epochs (How many times on the same dataset)
+        for epoch in range(1, epochs+1):
+            epoch_loss = 0
+            for iteration in range(num_of_training):
+                # Prototype => one batch (currently all)
+                dW_batch_list = []
+                db_batch_list = []
+                iteration_loss = 0
+
+                for batch in range(batch_size):
+                    dW_network_list = []
+                    db_network_list = []
+                    iteration_loss = 0
+                    # 1. Make forward pass
+                    self.forward_pass(x_data[batch+iteration*batch_size].reshape(-1, 1))
+
+                    # 2. Calculate Loss function
+                    #loss = self.lastlayer.output - y_data[iteration].reshape(-1,1)
+                    self.loss_function.compute(self.lastlayer.output, y_data[batch + iteration * batch_size].reshape(-1,1))  
+                    iteration_loss += self.loss_function.loss
+
+                    # 3.backward pass
+                    self.lastlayer.backward_last(self.loss_function.loss_derivative)
+                    current = self.lastlayer.previous_layer
+                    while current is not None:
+                        dW, db = current.backward()
+                        if dW is not None:
+                            dW_network_list.insert(0, dW)
+                        if db is not None:
+                            db_network_list.insert(0, db)
+                        current = current.previous_layer
+                    # 4. save all batches
+                    dW_batch_list.append(dW_network_list)
+                    db_batch_list.append(db_network_list)
+                iteration_loss = iteration_loss / batch_size
+                epoch_loss += iteration_loss
+                # 5. Averaging over all batches
+                dW_averaged = [np.mean(arrays, axis=0) for arrays in zip(*dW_batch_list)]
+                db_averaged = [np.mean(arrays, axis=0) for arrays in zip(*db_batch_list)]
+
+                # 4. Gradient descent
+                self.optimizer.compute(self.weights, self.biases, dW_averaged, db_averaged)
+            epoch_loss = epoch_loss/num_of_training 
+            print(f"epoch {epoch}: loss = {epoch_loss}")
+        return True
